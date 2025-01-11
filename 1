@@ -1,0 +1,103 @@
+import unicodedata
+from collections import Counter
+import requests
+import nltk
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+
+# Make sure you have downloaded necessary NLTK data:
+# nltk.download('punkt')
+# nltk.download('stopwords')
+nltk.download('averaged_perception_tagger')
+
+
+def normalize_text(text):
+    """Normalize characters (accented → unaccented) and remove combining marks."""
+    return "".join(
+        c for c in unicodedata.normalize("NFKD", text)
+        if not unicodedata.combining(c)
+    )
+
+def clean_and_tokenize(text):
+    """Lowercase, tokenize, remove non-alphabetic tokens and stopwords."""
+    text = text.lower()
+    
+    tokens = word_tokenize(text)
+
+    tokens = [t for t in tokens if t.isalpha()]
+    
+    stop_words = set(stopwords.words('english'))
+    tokens = [t for t in tokens if t not in stop_words]
+
+    pos_tags = nltk.pos_tag(tokens)
+    tokens_no_proper_nouns = [ 
+        word for (word,pos) in pos_tags
+        if pos not in ("NNP", "NNPS")
+        ]
+    return tokens_no_proper_nouns
+
+def count_word_frequencies(tokens):
+    """Return a Counter of word frequencies."""
+    return Counter(tokens)
+
+def get_top_n_words(word_freqs, n=20):
+    """Return the top n most common words with frequencies."""
+    return word_freqs.most_common(n)
+
+def get_word_definition(word):
+    """
+    Fetch a list of dictionary entries from dictionaryapi.dev for a word.
+    Returns an empty list if no definition is found or an error occurs.
+    """
+    url = f"https://api.dictionaryapi.dev/api/v2/entries/en/{word}"
+    try:
+        response = requests.get(url, timeout=3)
+        response.raise_for_status()
+        data = response.json()
+        # Ensure data is a list
+        return data if isinstance(data, list) else []
+    except requests.RequestException as e:
+        print(f"Error fetching definition for {word}: {e}")
+        return []
+
+def get_first_definition(definition_data, max_length=100):
+    """
+    Returns a short snippet from the first definition if it exists.
+    Truncates the snippet to max_length characters for brevity.
+    """
+    if not definition_data or not isinstance(definition_data, list):
+        return None
+    
+    for entry in definition_data:
+        meanings = entry.get("meanings", [])
+        for meaning in meanings:
+            definitions = meaning.get("definitions", [])
+            if definitions:
+                snippet = definitions[0].get("definition", "")
+                if snippet:
+                    return (snippet[:max_length] + "...") if len(snippet) > max_length else snippet
+    return None
+
+def process_subtitle_text(raw_text, top_n=20):
+    """
+    1. Normalize text
+    2. Tokenize and remove stopwords
+    3. Count word frequencies
+    4. Fetch definitions for top n words
+    5. Return list of dicts: {word, frequency, definition_data}
+    """
+    normalized_text = normalize_text(raw_text)
+    tokens = clean_and_tokenize(normalized_text)
+    freqs = count_word_frequencies(tokens)
+    top_words = get_top_n_words(freqs, top_n)
+
+    results = []
+    for word, freq in top_words:
+        definition_data = get_word_definition(word)
+        results.append({
+            'word': word,
+            'frequency': freq,
+            'definition_data': definition_data
+        })
+    return results
+
