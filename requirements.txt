@@ -10,6 +10,7 @@ confection==0.1.5
 cymem==2.0.11
 en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85
 Flask==3.1.0
+gunicorn==23.0.0
 idna==3.10
 itsdangerous==2.2.0
 Jinja2==3.1.5
@@ -31,7 +32,6 @@ Pygments==2.19.1
 regex==2024.11.6
 requests==2.32.3
 rich==13.9.4
-setuptools==75.8.0
 shellingham==1.5.4
 smart-open==7.1.0
 spacy==3.8.4
